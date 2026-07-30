@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot RAG - Normativa UFRO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+        
+        .chat-container {
+            padding: 30px;
+            height: 500px;
+            overflow-y: auto;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+        
+        .user-message {
+            background: #e3f2fd;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        
+        .bot-message {
+            background: #f5f5f5;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+        
+        .sources {
+            margin-top: 15px;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .source-item {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .input-container {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        input, select, button {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        input {
+            flex: 1;
+        }
+        
+        select {
+            width: 150px;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Chatbot UFRO</h1>
+            <p>Sistema RAG para consultas sobre normativa universitaria</p>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message bot-message">
+                ¡Hola! Soy tu asistente especializado en la normativa de la UFRO. 
+                ¿En qué puedo ayudarte hoy?
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <div class="input-row">
+                <input type="text" id="queryInput" placeholder="Escribe tu pregunta sobre la normativa UFRO..." onkeypress="handleKeyPress(event)">
+                <select id="providerSelect">
+                    <option value="openrouter">OpenRouter (GPT)</option>
+                    <option value="deepseek">DeepSeek</option>
+                </select>
+                <select id="kSelect">
+                    <option value="2">2 documentos</option>
+                    <option value="3" selected>3 documentos</option>
+                    <option value="4">4 documentos</option>
+                    <option value="5">5 documentos</option>
+                </select>
+                <button onclick="sendMessage()" id="sendButton">Enviar</button>
+            </div>
+            <div class="metrics" id="metrics"></div>
+        </div>
+    </div>
+
+    <script>
+        let conversationHistory = [];
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function addMessage(text, isUser = false, sources = [], metrics = null) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.innerHTML = text;
+            
+            if (sources && sources.length > 0) {
+                const sourcesDiv = document.createElement('div');
+                sourcesDiv.className = 'sources';
+                sourcesDiv.innerHTML = '<strong>📚 Fuentes:</strong>';
+                sources.forEach(source => {
+                    const sourceItem = document.createElement('div');
+                    sourceItem.className = 'source-item';
+                    sourceItem.textContent = `${source.title} - Página ${source.page}`;
+                    sourcesDiv.appendChild(sourceItem);
+                });
+                messageDiv.appendChild(sourcesDiv);
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            if (metrics) {
+                document.getElementById('metrics').innerHTML = 
+                    `Proveedor: ${metrics.provider} | Latencia: ${metrics.latency}ms | Tokens: ${metrics.tokens}`;
+            }
+        }
+        
+        function showLoading() {
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message bot-message loading';
+            loadingDiv.id = 'loadingMessage';
+            loadingDiv.textContent = 'Buscando información...';
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function hideLoading() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+        
+        async function sendMessage() {
+            const queryInput = document.getElementById('queryInput');
+            const providerSelect = document.getElementById('providerSelect');
+            const kSelect = document.getElementById('kSelect');
+            const sendButton = document.getElementById('sendButton');
+            
+            const query = queryInput.value.trim();
+            if (!query) return;
+            
+            // Agregar mensaje del usuario
+            addMessage(query, true);
+            queryInput.value = '';
+            sendButton.disabled = true;
+            
+            // Mostrar loading
+            showLoading();
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        provider: providerSelect.value,
+                        k: parseInt(kSelect.value)
+                    })
+                });
+                
+                const data = await response.json();
+                hideLoading();
+                
+                if (data.error) {
+                    addMessage(`❌ Error: ${data.error}`);
+                } else {
+                    addMessage(data.response, false, data.sources, {
+                        provider: data.provider,
+                        latency: data.latency,
+                        tokens: data.tokens
+                    });
+                }
+                
+            } catch (error) {
+                hideLoading();
+                addMessage('❌ Error de conexión. Intenta nuevamente.');
+                console.error('Error:', error);
+            }
+            
+            sendButton.disabled = false;
+        }
+    </script>
+</body>
+</html>
