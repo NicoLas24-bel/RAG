@@ -2,6 +2,7 @@
 
 Sistema de Retrieval-Augmented Generation (RAG) para consultas sobre normativa y reglamentos de la Universidad de La Frontera (UFRO). Implementa un chatbot inteligente que responde preguntas basándose en documentos oficiales de la universidad.
 
+![alt text](image.png)
 ---
 
 ## 🚀 Características
