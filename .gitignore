@@ -1,0 +1,56 @@
+# ======================
+# Entorno virtual Python
+# ======================
+venv/
+.venv/
+env/
+.env/
+
+# ======================
+# Variables de entorno (¡NUNCA subir!)
+# ======================
+.env
+*.env
+
+# ======================
+# Caché de Python
+# ======================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ======================
+# Datos y modelos (pesados)
+# ======================
+data/raw/
+data/processed/
+*.pdf
+*.bin
+*.safetensors
+
+# ======================
+# Caché de modelos HuggingFace
+# ======================
+.cache/
+
+# ======================
+# IDEs y editores
+# ======================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ======================
+# Sistema operativo
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# Logs y temporales
+# ======================
+*.log
+*.tmp
